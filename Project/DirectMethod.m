@@ -472,5 +472,9 @@ end
 
 fprintf('The standings table : \n')
 
-Standings'
+Table = { (1:numTeams)' Standings' } ;
+
+Final = table ( Table{1,1} , Table{1,2} );
+Final.Properties.VariableNames = {'Rank','Team'}
+
 
