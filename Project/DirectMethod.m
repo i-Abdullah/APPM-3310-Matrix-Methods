@@ -57,6 +57,7 @@ close all
 
 numTeams = 32;
 h = @(x) 0.5 + 0.5*sign(x-0.5)*sqrt(abs(2*x - 1) ) ;
+f = @(x) ( 0.05*x + x^2 ) / ( 2 + 0.05*x + x^2) ;
 
 [ num txt rw ] = xlsread('NFL2015.xlsx');
 
@@ -109,6 +110,8 @@ teams = {'Arizona Cardinals';...
 %% code
 
 A = eye(numTeams)*0.5 ; % matrix A, define size
+E = eye(numTeams)*0.5 ; % matrix E, define size
+
 for i = 1:length(games);
    
 Winner = Winners{i};
@@ -401,6 +404,9 @@ end;
 A(iw,il) = A(iw,il) + h ( ( PointsW(i) + 1 ) / ( PointsW(i) + PointsL(i) + 2 )  ) ; 
 A(il,iw) = A(il,iw) + h ( ( PointsL(i) + 1 ) / ( PointsW(i) + PointsL(i) + 2 )  ) ; 
 
+E(iw,il) = E(iw,il) + f( ( 5 + PointsW(i) + PointsW(i)^(2/3) ) / (5 + PointsL(i) + PointsW(i)^(2/3)));
+E(il,iw) = E(il,iw) + f( ( 5 + PointsL(i) + PointsL(i)^(2/3) ) / (5 + PointsW(i) + PointsL(i)^(2/3))) ; 
+
 %A(iw,il) = 1;
 %A(il,iw) = 1/2;
 
@@ -413,18 +419,26 @@ end
 
 [ eVec eVal ] = eigs(A);
 
-n = 9;
+n = 12;
 r = ((A^(n))*ones(32,1)) / norm(((A^(n))*ones(32,1)));
 
 
+% direct method:
 
 for i = 1:numTeams
-    
+ 
+    % Direct method :
+
     syms N;
     
-    GamesPlayed = length(find ( strcmp(Winners,teams(i)) == 1 ))...
+    % find number of games each team played: find how many
+    % times the team neam apperead in losers+winners list,
+    % so it's total number of games played.
+ GamesPlayed = length(find ( strcmp(Winners,teams(i)) == 1 ))...
     + length(find ( strcmp(Losers,teams(i)) == 1 )) ;
 
+
+% initiate the series sum described in the research 
 SeriesSum = 0;
 
 for j = 1:numTeams
@@ -438,6 +452,36 @@ end
     
     
 end
+
+
+for i = 1:numTeams
+ 
+    % nonlinear scheme method :
+
+    syms N;
+    
+    % find number of games each team played: find how many
+    % times the team neam apperead in losers+winners list,
+    % so it's total number of games played.
+ GamesPlayed_nonlinear = length(find ( strcmp(Winners,teams(i)) == 1 ))...
+    + length(find ( strcmp(Losers,teams(i)) == 1 )) ;
+
+
+% initiate the series sum described in the research 
+SeriesSum_nonlinear = 0;
+
+for j = 1:numTeams
+    
+    SeriesSum_nonlinear = SeriesSum_nonlinear + (E(i,j));
+
+end
+
+    Score_nonlinear(i) = (1/GamesPlayed_nonlinear) * SeriesSum_nonlinear  ;
+
+    
+    
+end
+
 
 %% find team that should've been first:
 
