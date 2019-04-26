@@ -1,12 +1,10 @@
 %% info:
 
 %{
-
 This's part of APPM 3310 Matrix methods and applications project. For more
 information cehck /Info. This code will try to rank sports team using the
 first method described in the research paper (The direct method), foudn in
 pp 81. 
-
 %}
 
 
@@ -56,7 +54,6 @@ close all
 
 
 numTeams = 32;
-h = @(x) 0.5 + 0.5*sign(x-0.5)*sqrt(abs(2*x - 1) ) ;
 f = @(x) ( 0.05*x + x^2 ) / ( 2 + 0.05*x + x^2) ;
 
 [ num txt rw ] = xlsread('NFL2015.xlsx');
@@ -109,8 +106,7 @@ teams = {'Arizona Cardinals';...
 
 %% code
 
-A = eye(numTeams)*0.5 ; % matrix A, define size
-E = eye(numTeams)*0.5 ; % matrix E, define size
+E = eye(numTeams); % matrix E, define size
 
 for i = 1:length(games);
    
@@ -400,12 +396,8 @@ case  teams(32);
     
 end;    
 
-
-A(iw,il) = A(iw,il) + h ( ( PointsW(i) + 1 ) / ( PointsW(i) + PointsL(i) + 2 )  ) ; 
-A(il,iw) = A(il,iw) + h ( ( PointsL(i) + 1 ) / ( PointsW(i) + PointsL(i) + 2 )  ) ; 
-
-E(iw,il) = E(iw,il) + f( ( 5 + PointsW(i) + PointsW(i)^(2/3) ) / (5 + PointsL(i) + PointsW(i)^(2/3)));
-E(il,iw) = E(il,iw) + f( ( 5 + PointsL(i) + PointsL(i)^(2/3) ) / (5 + PointsW(i) + PointsL(i)^(2/3))) ; 
+E(iw,il) = E(iw,il) + ( 5 + PointsW(i) + PointsW(i)^(2/3) ) / (5 + PointsL(i) + PointsW(i)^(2/3));
+E(il,iw) = E(il,iw) + ( 5 + PointsL(i) + PointsL(i)^(2/3) ) / (5 + PointsW(i) + PointsL(i)^(2/3)); 
 
 %A(iw,il) = 1;
 %A(il,iw) = 1/2;
@@ -413,100 +405,83 @@ E(il,iw) = E(il,iw) + f( ( 5 + PointsL(i) + PointsL(i)^(2/3) ) / (5 + PointsW(i)
 
 end
 
+
+%% get e vec
+
+[ e v ] = eigs(E);
+
+
 %% compute ranks:
 
-% get eigenvalues and eigen-vectors
 
-[ eVec eVal ] = eigs(A);
+%Nonlinear Calculation:
 
+nonlinear_f =0;
 
-% manually check n number, the idea is you shouldn't see much difference.
+r_0 = ones(numTeams,1);
+%r_0 = 1:numTeams;
 
-n = 100;
-r = ((A^(n))*ones(32,1)) / norm(((A^(n))*ones(32,1)));
+r = r_0;
+%r = e(:,1);
 
-
-
-% direct method:
-
-for i = 1:numTeams
- 
-    % Direct method :
-
-    syms N;
+for k = 1:1000
     
-    % find number of games each team played: find how many
-    % times the team neam apperead in losers+winners list,
-    % so it's total number of games played.
- GamesPlayed = length(find ( strcmp(Winners,teams(i)) == 1 ))...
+for i = 1:numTeams;
+    
+    for j = 1:numTeams
+        
+        % get the sum
+        nonlinear_f(j) = f(E(i,j)*r(j));  
+        
+    end
+    
+     GamesPlayed = length(find ( strcmp(Winners,teams(i)) == 1 ))...
+    + length(find ( strcmp(Losers,teams(i)) == 1 )) ;
+
+        r_modefied(i,1) =sum(nonlinear_f) ;
+
+    
+nonlinear_f = [];
+
+
+end
+
+r = r_modefied;
+
+end
+
+
+% find number of game each team player.
+
+
+    
+for i = 1:numTeams;
+    
+        
+        
+    
+    
+     GamesPlayed(i) = length(find ( strcmp(Winners,teams(i)) == 1 ))...
     + length(find ( strcmp(Losers,teams(i)) == 1 )) ;
 
 
-% initiate the series sum described in the research 
-SeriesSum = 0;
-
-for j = 1:numTeams
     
-    SeriesSum = SeriesSum + (A(i,j)*r(j));
+
 
 end
 
-    Score(i) = (1/GamesPlayed) * SeriesSum  ;
-
-    
-    
-end
-
-
-for i = 1:numTeams
- 
-    % nonlinear scheme method :
-
-    syms N;
-    
-    % find number of games each team played: find how many
-    % times the team neam apperead in losers+winners list,
-    % so it's total number of games played.
- GamesPlayed_nonlinear = length(find ( strcmp(Winners,teams(i)) == 1 ))...
-    + length(find ( strcmp(Losers,teams(i)) == 1 )) ;
-
-
-% initiate the series sum described in the research 
-SeriesSum_nonlinear = 0;
-
-for j = 1:numTeams
-    
-    SeriesSum_nonlinear = SeriesSum_nonlinear + (E(i,j));
-
-end
-
-    Score_nonlinear(i) = (1/GamesPlayed_nonlinear) * SeriesSum_nonlinear  ;
-
-    
-    
-end
-
+%r = r ./ GamesPlayed' ;
 
 %% find team that should've been first:
 
+%% find the overall ranking:
+
 fprintf('The SuperBowl winner should have been : \n')
-fprintf(char(teams((find(Score==max(Score))))));
+fprintf(char(teams((find(r==max(r))))));
 fprintf('\n')
 
 
-%% find the overall ranking:
-
-% for i=1:length(teams);
-%     
-%     Current = find(Score==max(Score));
-%     
-%     Standings(i) = Current;
-%     
-%     Score(Current) = [];
-%     
-% end
-
-Standings_sort = [ Score ; 1:numTeams ]';
+Standings_sort = [ r(:,1)' ; 1:numTeams ]';
 
 [ a b ] = sort(Standings_sort,'descend');
 
@@ -524,5 +499,3 @@ Table = { (1:numTeams)' Standings' } ;
 
 Final = table ( Table{1,1} , Table{1,2} );
 Final.Properties.VariableNames = {'Rank','Team'}
-
-
